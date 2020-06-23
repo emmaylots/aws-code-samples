@@ -39,20 +39,21 @@ def lambda_handler(event, context):
     # print(new_value_2)
     ssl_secure_sid["Resource"] = new_value_2
     # print(ssl_secure_sid["Resource"])
-    # Initiate connection to S3
-    response = s3.get_bucket_policy(Bucket=bucket)
-    # Retrive policy from sample
-    raw_bucket_policy = response['Policy']
-    # Convert policy to Dict
-    mypolicy = json.loads(raw_bucket_policy)
-    # Append new policy to existing one
-    mypolicy['Statement'].append(ssl_secure_sid)
-    # Convert the policy from JSON dict to string
-    bucket_policy = json.dumps(mypolicy)
+
 
     # Starting actual S3 API operation
     try:
         # First check if there is an existing bucket policy and append the enforce ssl SID to it
+        # Initiate connection to S3
+        response = s3.get_bucket_policy(Bucket=bucket)
+        # Retrive policy from sample
+        raw_bucket_policy = response['Policy']
+        # Convert policy to Dict
+        mypolicy = json.loads(raw_bucket_policy)
+        # Append new policy to existing one
+        mypolicy['Statement'].append(ssl_secure_sid)
+        # Convert the policy from JSON dict to string
+        bucket_policy = json.dumps(mypolicy)
         # Set the new policy on the bucket
         logger.info(f"There is an existing Bucket policy, appending the ssl enforcement SID to it:....\n")
         logger.info(ssl_secure_sid)
@@ -60,8 +61,7 @@ def lambda_handler(event, context):
     except ClientError as e:
         # We now check if there is no existing bucket policy, then create a brand new Policy from template
         if e.response['Error']['Code'] == 'NoSuchBucketPolicy':
-            logger.info("This Bucket does not have an Existing Bucket Policy, creating a new SSL-Only Bucket Policy:"
-                        " ...\n")
+            logger.info("This Bucket does not have an Existing Bucket Policy, creating a new SSL-Only Bucket Policy: ...\n")
             logger.info(allow_ssl_only_sample_bucket_policy)
             new_bucket_policy = json.dumps(allow_ssl_only_sample_bucket_policy)
             # Set the new policy
@@ -72,5 +72,7 @@ def lambda_handler(event, context):
             logger.exception(f"Error Code: {e.response['Error']['Code']}")
             logger.exception(f"RequestID: {e.response['ResponseMetadata']['RequestId']}")
             logger.exception(f"HostID: {e.response['ResponseMetadata']['HostId']}")
+
+
 
 
