@@ -16,6 +16,8 @@ logger.setLevel('INFO')
 
 def lambda_handler(event, context):
     #print("Received event: " + json.dumps(event, indent=2))
+    logger.info(event)
+    logger.info("Received event: " + json.dumps(event, indent=2))
     bucket = event['Records'][0]['Sns']['Message']
     logger.info(f"S3 bucket name to be remediated is:  {bucket}")
     # Enable boto3 debug logging
@@ -57,7 +59,8 @@ def lambda_handler(event, context):
         # Set the new policy on the bucket
         logger.info(f"There is an existing Bucket policy, appending the ssl enforcement SID to it:....\n")
         logger.info(ssl_secure_sid)
-        s3.put_bucket_policy(Bucket=bucket, Policy=bucket_policy)
+        #s3.put_bucket_policy(Bucket=bucket, Policy=bucket_policy)
+        put_bucket_policy(bucket, bucket_policy)
     except ClientError as e:
         # We now check if there is no existing bucket policy, then create a brand new Policy from template
         if e.response['Error']['Code'] == 'NoSuchBucketPolicy':
@@ -65,7 +68,8 @@ def lambda_handler(event, context):
             logger.info(allow_ssl_only_sample_bucket_policy)
             new_bucket_policy = json.dumps(allow_ssl_only_sample_bucket_policy)
             # Set the new policy
-            s3.put_bucket_policy(Bucket=bucket, Policy=new_bucket_policy)
+            #s3.put_bucket_policy(Bucket=bucket, Policy=new_bucket_policy)
+            put_bucket_policy(bucket, new_bucket_policy)
         else:
             # Finally, this block will catch all other errors and return requestIDs for AWS Support
             logger.exception("Unable to complete requested operation, see error details below:")
@@ -74,5 +78,16 @@ def lambda_handler(event, context):
             logger.exception(f"HostID: {e.response['ResponseMetadata']['HostId']}")
 
 
-
-
+def put_bucket_policy(var_bucket, var_policy):
+    # Instantiate S3 Client
+    s3 = boto3.client('s3')
+    try:
+        s3.put_bucket_policy(Bucket=var_bucket, Policy=var_policy)
+    except ClientError as e:
+            # Finally, this block will catch all other errors and return requestIDs for AWS Support
+            logger.exception("Unable to complete requested operation, see error details below:")
+            logger.exception(f"Error Code: {e.response['Error']['Code']}")
+            logger.exception(f"RequestID: {e.response['ResponseMetadata']['RequestId']}")
+            logger.exception(f"HostID: {e.response['ResponseMetadata']['HostId']}")
+        
+    
