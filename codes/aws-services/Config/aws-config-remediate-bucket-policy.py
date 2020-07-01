@@ -1,4 +1,3 @@
-from __future__ import print_function
 import json
 import random
 import string
@@ -13,6 +12,8 @@ print('Loading function')
 logger = logging.getLogger(__name__)
 logger.setLevel('INFO')
 
+s3 = boto3.client('s3')
+
 
 def lambda_handler(event, context):
     #print("Received event: " + json.dumps(event, indent=2))
@@ -23,8 +24,6 @@ def lambda_handler(event, context):
     # Enable boto3 debug logging
     # boto3.set_stream_logger("")
 
-    # Instantiate S3 Client
-    s3 = boto3.client('s3')
     # Creating a random string for the bucket policy SID
     my_rand_str = ''.join(random.choices(string.hexdigits, k=6))
     # Here is a sample bucket policy enforcing SSL requests only, you can customize this
@@ -79,15 +78,11 @@ def lambda_handler(event, context):
 
 
 def put_bucket_policy(var_bucket, var_policy):
-    # Instantiate S3 Client
-    s3 = boto3.client('s3')
     try:
         s3.put_bucket_policy(Bucket=var_bucket, Policy=var_policy)
     except ClientError as e:
-            # Finally, this block will catch all other errors and return requestIDs for AWS Support
-            logger.exception("Unable to complete requested operation, see error details below:")
-            logger.exception(f"Error Code: {e.response['Error']['Code']}")
-            logger.exception(f"RequestID: {e.response['ResponseMetadata']['RequestId']}")
-            logger.exception(f"HostID: {e.response['ResponseMetadata']['HostId']}")
-        
-    
+        # Finally, this block will catch all other errors and return requestIDs for AWS Support
+        logger.exception("Unable to complete requested operation, see error details below:")
+        logger.exception(f"Error Code: {e.response['Error']['Code']}")
+        logger.exception(f"RequestID: {e.response['ResponseMetadata']['RequestId']}")
+        logger.exception(f"HostID: {e.response['ResponseMetadata']['HostId']}")
