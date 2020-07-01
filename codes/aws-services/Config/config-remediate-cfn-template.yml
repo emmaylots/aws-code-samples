@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: 2010-09-09
+Resources:
+  configremediatefniamrole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: configremediatefniamrolePolicy0
+          PolicyDocument:
+            Statement:
+              - Action:
+                  - 's3:GetBucketPolicy'
+                  - 's3:PutBucketPolicy'
+                Resource: '*'
+                Effect: Allow
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+  configremediatefunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Runtime: python3.6
+      Timeout: 300
+      Description: An AWS Config SSL-Bucket AutoRemediation.
+      MemorySize: 256
+      Role: !GetAtt 
+        - configremediatefniamrole
+        - Arn
+      Code:
+        ZipFile:
+            Fn::Sub: |
+                import json
+
+                def lambda_handler(event, context):
+                # TODO implement
+                    return {
+                        'statusCode': 200,
+                        'body': json.dumps('Hello from Lambda!')
+                        }
+      Handler: index.lambda_handler                  
+    DependsOn:
+      - configremediatefniamrole
+  configremediatesnstopic:
+    Type: 'AWS::SNS::Topic'
+    Properties:
+      DisplayName: AWS Config Remediation SNS
+      Subscription: [{
+      "Endpoint" : { "Fn::GetAtt" : [ "configremediatefunction", "Arn" ] },
+      "Protocol" : "lambda"
+    }]
+  configremediatessmiamrole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      Policies:
+        - PolicyName: iamroleRolePolicy0
+          PolicyDocument:
+            Statement:
+              - Action:
+                  - 'sns:Publish'
+                Effect: Allow
+                Resource: !Ref configremediatesnstopic
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ssm.amazonaws.com
+            Action: 'sts:AssumeRole'
+    DependsOn:
+      - configremediatesnstopic
+  configremediatefunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:invokeFunction
+      FunctionName:
+        Fn::GetAtt: configremediatefunction.Arn
+      Principal: sns.amazonaws.com
+      SourceArn: !Ref configremediatesnstopic
